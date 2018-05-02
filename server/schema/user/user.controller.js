@@ -67,6 +67,29 @@ exports.me = {
   })
 }
 
+exports.changePassword = {
+  type: UserType,
+  args: {
+    id: { type: GraphQLString },
+    oldPassword: { type: GraphQLString },
+    newPassword: { type: GraphQLString }
+  },
+  resolve: auth.isAuthenticated(async (_, args, ctx) => {
+    try {
+      const user = await User.findById(args.id);
+      const auth = await user.authenticate(args.oldPassword);
+      if(auth) {
+        user.password = args.newPassword;
+        return await user.save();
+      } else {
+        throw new UserError('Your password doesn\'t match!');
+      }
+    } catch(err) {
+      throw err
+    }
+  })
+}
+
 exports.delete = {
   type: new GraphQLList(UserType),
   args: {

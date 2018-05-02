@@ -23,12 +23,22 @@
           label="Role"
           width="120">
         </el-table-column>
-        <el-table-column>
+        <el-table-column
+          width="120">
           <template slot-scope="scope">
             <el-button
               type="text"
               size="small"
               @click="handleEdit(scope.row)">Edit</el-button>
+          </template>
+        </el-table-column>
+        <el-table-column>
+          <template
+            slot-scope="scope">
+            <el-button
+              type="text"
+              size="small"
+              @click="handleChangePassword(scope.row)">Change Password</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -155,12 +165,47 @@
       </span>
     </el-dialog>
 
+    <el-dialog title="Change Password" :visible.sync="changePasswordDialog" @close="closeDialog('formChangePassword')" width="35%" :close-on-click-modal="false">
+      <el-form
+        label-position="left"
+        :model="formChangePassword"
+        :rules="rules"
+        ref="formChangePassword"
+        status-icon>
+        <el-form-item
+          label="Old Password"
+          prop="oldPassword">
+          <el-input
+            type="password"
+            v-model="formChangePassword.oldPassword"
+            auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item
+          label="New Password"
+          prop="newPassword">
+          <el-input
+            type="password"
+            v-model="formChangePassword.newPassword"
+            auto-complete="off"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button
+          size="small"
+          @click="changePasswordDialog = false">Cancel</el-button>
+        <el-button
+          type="primary"
+          size="small"
+          @click="handleChangePasswordSubmit('formChangePassword')">Update</el-button>
+      </span>
+    </el-dialog>
+
   </div>
 </template>
 
 <script>
   import _ from 'lodash'
-  import { USER_ALL, USER_CREATE, USER_DELETE, USER_UPDATE } from '@/apollo/queries/user'
+  import { USER_ALL, USER_CREATE, USER_DELETE, USER_UPDATE, CHANGE_PASSWORD } from '@/apollo/queries/user'
 
   export default {
     apollo: {
@@ -172,6 +217,7 @@
       return {
         addDialog: false,
         editDialog: false,
+        changePasswordDialog: false,
         formLabelWidth: '120px',
         userAll: [],
         multipleSelect: [],
@@ -187,6 +233,11 @@
           password: '',
           role: ''
         },
+        formChangePassword: {
+          id: '',
+          oldPassword: '',
+          newPassword: ''
+        },
         rules: {
           username: [
             {required: true, message: 'Please input username', trigger: 'blur'}
@@ -196,6 +247,12 @@
           ],
           role: [
             {required: true, message: 'Please select role', trigger: 'change'}
+          ],
+          oldPassword: [
+            { required: true, message: 'Please input your old password', trigger: 'blur' }
+          ],
+          newPassword: [
+            { required: true, message: 'Please input your new password', trigger: 'blur' }
           ]
         }
       }
@@ -234,8 +291,8 @@
                 }
               })
               if(data.userCreate) {
-                this.addDialog = false;
                 this.$refs[form].resetFields();
+                this.addDialog = false;
                 this.$message({
                   message: 'User created succesfully',
                   type: 'success',
@@ -279,11 +336,11 @@
           console.log(err)
         }
       },
-      handleEdit (row) {
+      handleEdit (val) {
         this.editDialog = true;
-        this.form.id = row.id;
-        this.form.username = row.username;
-        this.form.role = row.role;
+        this.form.id = val.id;
+        this.form.username = val.username;
+        this.form.role = val.role;
       },
       handleEditSubmit: function(form) {
         this.$refs[form].validate(async (valid) => {
@@ -314,8 +371,8 @@
                 }
               })
               if(data.userUpdate) {
-                this.editDialog = false;
                 this.$refs[form].resetFields();
+                this.editDialog = false;
                 this.$message({
                   message: 'User updated succesfully',
                   type: 'success',
@@ -324,6 +381,43 @@
               }
             } catch(err) {
               console.log(err)
+            }
+          } else {
+            return false
+          }
+        })     
+      },
+      handleChangePassword(val) {
+        this.changePasswordDialog = true;
+        this.formChangePassword.id = val.id;
+      },
+      handleChangePasswordSubmit: function(form) {
+        this.$refs[form].validate(async (valid) => {
+          if(valid) {
+            try {
+              const { data } = await this.$apollo.mutate({
+                mutation: CHANGE_PASSWORD,
+                variables: {
+                  id: this.formChangePassword.id,
+                  oldPassword: this.formChangePassword.oldPassword,
+                  newPassword: this.formChangePassword.newPassword
+                }
+              })
+              if(data.userChangePassword) {
+                this.$refs[form].resetFields();
+                this.changePasswordDialog = false;
+                this.$message({
+                  message: 'Your password successfully updated, please logout and login with your new password',
+                  type: 'success',
+                  center: true
+                });
+              }
+            } catch(err) {
+              this.$message({
+                message: err.graphQLErrors[0].message,
+                type: 'error',
+                center: true
+              });
             }
           } else {
             return false
