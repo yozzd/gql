@@ -76,7 +76,7 @@ UserSchema.methods = {
     try {
       const defaultIterations = 10000
       const defaultKeyLength = 64
-      const salt = new Buffer(this.salt, 'base64')
+      const salt = new Buffer.from(this.salt, 'base64')
       const key = await crypto.pbkdf2Sync(password, salt, defaultIterations, defaultKeyLength, 'sha256').toString('base64')
       return key
     } catch(err) {
